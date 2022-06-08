@@ -1,19 +1,47 @@
 from aws_cdk import (
     # Duration,
+    # core as cdk,
     Stack,
-    # aws_sqs as sqs,
+    Aspects, IAspect,
+    RemovalPolicy,
+    aws_s3 as s3,
+    aws_s3_notifications as s3n,
+    aws_iam as iam,
+    aws_sns as sns
 )
 from constructs import Construct
+import jsii
+
+@jsii.implements(IAspect)
+class RoleChecker():
+    
+    def visit(self, node):
+        
+        print(node)
+
 
 class AspectsStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # The code that defines your stack goes here
+        Aspects.of(self).add(RoleChecker())
 
-        # example resource
-        # queue = sqs.Queue(
-        #     self, "AspectsQueue",
-        #     visibility_timeout=Duration.seconds(300),
-        # )
+        bucket = s3.Bucket(
+            self,
+            "aBucket",
+            auto_delete_objects=True,
+            removal_policy=RemovalPolicy.DESTROY,
+            event_bridge_enabled=True,
+            #**kms_params
+        )
+
+        topic = sns.Topic(self, 'aTopic')
+
+        bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            s3n.SnsDestination(topic))
+
+
+
+

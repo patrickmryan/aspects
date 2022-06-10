@@ -1,6 +1,7 @@
+import sys
+
 from aws_cdk import (
-    # Duration,
-    # core as cdk,
+    Resource,
     Stack,
     Aspects, IAspect,
     RemovalPolicy,
@@ -14,10 +15,25 @@ import jsii
 
 @jsii.implements(IAspect)
 class RoleChecker():
+
+    # eliminate any instances of CfnRole
+    # attach a specific role to Lambdas
     
     def visit(self, node):
-        
-        print(node)
+
+        # print(f'{node} - {node.addr}', file=sys.stderr)
+        print(node, file=sys.stderr)
+
+
+        if not Resource.is_resource(node):
+            print('  not a resource', file=sys.stderr)
+            # return        
+
+        if Construct.is_construct(node):
+            print('  node.addr -> '+node.node.addr, file=sys.stderr)
+        # else:
+        #     print('  not a Construct', file=sys.stderr)
+
 
 
 class AspectsStack(Stack):

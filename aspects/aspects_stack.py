@@ -26,8 +26,8 @@ class RoleChecker():
         # eliminate any instances of CfnRole
         # attach a specific role to Lambdas
 
-        self.log(f'me -> {str(construct)}, {construct.node.id} ({str(construct.__class__)})')
-        self.log('  my node -> '+str(construct.node.__class__))
+        self.log(f'me -> {str(construct)}, node-> {construct.node.id}, {str(construct.node)},  ({str(construct.__class__)})')
+        # self.log('  my node -> '+str(construct.node.__class__))
         # self.log(dir(construct))
         # self.log(construct)
         
@@ -39,7 +39,12 @@ class RoleChecker():
         else:
             self.log('  children')
             for kid in kids:
-                self.log('    '+str(kid))
+                self.log(f'    {str(kid)}, node-> {str(kid.node)}')
+
+                if isinstance(kid, iam.Policy):
+                    # kill off the policy
+                    self.log(f'  trying to remove {str(kid)}')
+                    construct.node.try_remove_child(kid.node.id)
             
 
         # verb = 'is' if Resource.is_resource(node) else 'is not'
@@ -48,8 +53,11 @@ class RoleChecker():
         # if Construct.is_construct(node):
         #      self.log('  is a Construct')
 
-        if not isinstance(construct, s3.Bucket):
-            return
+        # if not isinstance(construct, s3.Bucket):
+        #     return
+
+
+
 
         # self.log('role = '+str(node._notifications_handler_role))
         # node._notifications_handler_role = self.handler_role
@@ -68,9 +76,10 @@ class AspectsStack(Stack):
         bucket = s3.Bucket(
             self,
             "aBucket",
+            notifications_handler_role=role
         )
 
-        Aspects.of(self).add(RoleChecker(handler_role=role))  # was bucket
+        Aspects.of(self).add(RoleChecker(handler_role=role))  # was role
 
         topic = sns.Topic(self, 'aTopic')
 

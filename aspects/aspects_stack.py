@@ -15,25 +15,45 @@ import jsii
 
 @jsii.implements(IAspect)
 class RoleChecker():
-
-    # eliminate any instances of CfnRole
-    # attach a specific role to Lambdas
     
-    def visit(self, node):
+    def __init__(self, handler_role=None):
+        self.handler_role = handler_role
 
-        # print(f'{node} - {node.addr}', file=sys.stderr)
-        print(node, file=sys.stderr)
+    def log(self, message, **kwargs):
+        print(message, **kwargs, file=sys.stderr)
+    
+    def visit(self, construct):
+        # eliminate any instances of CfnRole
+        # attach a specific role to Lambdas
 
+        self.log(f'me -> {str(construct)}, {construct.node.id} ({str(construct.__class__)})')
+        self.log('  my node -> '+str(construct.node.__class__))
+        # self.log(dir(construct))
+        # self.log(construct)
+        
+        self.log('  default - '+str(construct.node.default_child))
 
-        if not Resource.is_resource(node):
-            print('  not a resource', file=sys.stderr)
-            # return        
+        kids = construct.node.children
+        if not kids:
+            self.log('  no children')
+        else:
+            self.log('  children')
+            for kid in kids:
+                self.log('    '+str(kid))
+            
 
-        if Construct.is_construct(node):
-            print('  node.addr -> '+node.node.addr, file=sys.stderr)
-        # else:
-        #     print('  not a Construct', file=sys.stderr)
+        # verb = 'is' if Resource.is_resource(node) else 'is not'
+        # self.log(f'  {verb} a resource')
 
+        # if Construct.is_construct(node):
+        #      self.log('  is a Construct')
+
+        if not isinstance(construct, s3.Bucket):
+            return
+
+        # self.log('role = '+str(node._notifications_handler_role))
+        # node._notifications_handler_role = self.handler_role
+        # self.log('role = '+str(node._notifications_handler_role))
 
 
 class AspectsStack(Stack):
@@ -41,16 +61,16 @@ class AspectsStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        Aspects.of(self).add(RoleChecker())
+        role = iam.Role.from_role_name(self, 'HandlerRole', 's3_handler_role')
+
+        # Aspects.of(self).add(RoleChecker(handler_role=role))
 
         bucket = s3.Bucket(
             self,
             "aBucket",
-            auto_delete_objects=True,
-            removal_policy=RemovalPolicy.DESTROY,
-            event_bridge_enabled=True,
-            #**kms_params
         )
+
+        Aspects.of(self).add(RoleChecker(handler_role=role))  # was bucket
 
         topic = sns.Topic(self, 'aTopic')
 

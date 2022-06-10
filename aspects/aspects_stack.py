@@ -23,12 +23,14 @@ class PolicyEliminator:
     def visit(self, construct):
         # eliminate any instances of iam.Policy
 
-        for kid in construct.node.children:
+        policies = [
+            kid.node.id
+            for kid in construct.node.children
+            if isinstance(kid, iam.Policy)
+        ]
 
-            if isinstance(kid, iam.Policy):
-                # kill off the policy
-                # self.log(f'  trying to remove {str(kid)}')
-                construct.node.try_remove_child(kid.node.id)
+        for policy_id in policies:
+            construct.node.try_remove_child(policy_id)
 
 
 class AspectsStack(Stack):
@@ -40,7 +42,6 @@ class AspectsStack(Stack):
         Aspects.of(self).add(PolicyEliminator())
 
         bucket = s3.Bucket(self, "aBucket", notifications_handler_role=role)
-
         topic = sns.Topic(self, "aTopic")
 
         bucket.add_event_notification(
